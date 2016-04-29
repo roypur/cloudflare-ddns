@@ -8,10 +8,10 @@
     <url>http://maven.apache.org</url>
     
     <repositories>
-        <repository>
+   <!--     <repository>
             <id>technology.purser</id>
             <url>https://maven.purser.technology/release</url>
-        </repository>
+        </repository>-->
         <repository>
             <id>technology.purser.local</id>
             <url>file:../http-client/repo/release</url>
@@ -29,7 +29,7 @@
         <dependency>
             <groupId>technology.purser</groupId>
             <artifactId>http</artifactId>
-            <version>0.7.0</version>
+            <version>0.7.1</version>
         </dependency>
 
     </dependencies>

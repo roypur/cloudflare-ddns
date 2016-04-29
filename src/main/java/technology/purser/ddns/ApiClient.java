@@ -1,12 +1,5 @@
 package technology.purser.ddns;
 
-//import java.net.URL;
-//import java.net.URLConnection;
-
-//import javax.net.ssl.HostnameVerifier;
-//import javax.net.ssl.HttpsURLConnection;
-//import javax.net.ssl.SSLSession;
-
 import java.io.InputStream;
 import java.util.Arrays;
 
@@ -36,8 +29,10 @@ class ApiClient{
     
     private String ipv4Address;
     private String ipv6Address;
+    
+    private boolean validateCerts;
 
-    public ApiClient(String apiEmail, String apiKey){
+    public ApiClient(String apiEmail, String apiKey, boolean validateCerts){
         this.apiEmail = apiEmail;
         this.apiKey = apiKey;
         ipv4Address = "";
@@ -138,7 +133,7 @@ class ApiClient{
         
             ipv6Address = resp.getBody().trim();
         }catch(Exception e){
-            System.out.println("Could not connect with IPv6.");
+            System.out.println(e.getMessage());
         }
         
         try{
@@ -148,7 +143,7 @@ class ApiClient{
         
             ipv4Address = resp.getBody().trim();
         }catch(Exception e){
-            System.out.println("Could not connect with IPv4.");
+            System.out.println(e.getMessage());
         }
         
     }

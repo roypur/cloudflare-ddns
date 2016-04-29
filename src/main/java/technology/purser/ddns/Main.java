@@ -17,7 +17,7 @@ class Main{
         
         ConfigFile cf = ConfigFile.read(fileName);
         
-        ApiClient ac = new ApiClient(cf.getApiEmail(), cf.getApiKey());
+        ApiClient ac = new ApiClient(cf.getApiEmail(), cf.getApiKey(), cf.validateCerts());
 
         ac.getIP();
         

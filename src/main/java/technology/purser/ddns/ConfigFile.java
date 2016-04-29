@@ -13,6 +13,8 @@ class ConfigFile{
     
     private String v4Host;
     
+    private boolean validateCerts;
+    
     private HashMap<String, String> ipv6;
     
     public HashMap<String, String> getIPV6(){
@@ -23,6 +25,10 @@ class ConfigFile{
         for(String s: ipv6.keySet()){
             System.out.println(s);
         }
+    }
+    
+    public boolean validateCerts(){
+        return validateCerts;
     }
     
     public String getApiKey(){

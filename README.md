@@ -20,6 +20,7 @@ Example config-file:
         "apiEmail":"mail@example.org",
         "domain":"example.org",
         "v4Host":"home",
+        "validateCerts":true,
         "ipv6":{
             "first":"AA:BB:CC:BB:EE:AB",
             "second":"BA:44:AA:CC:AE:AB"
