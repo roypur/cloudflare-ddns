@@ -41,7 +41,13 @@ public final class SingleByte{
     }
     
     public String toHexString(){
-        return Integer.toHexString(data);
+    
+        short tmpData = (short) ( data + 256 );
+        //To prevent leading zeros
+        
+        String hexString = Integer.toHexString(tmpData).substring(1);
+    
+        return hexString;
     }
         
     private void byteToBin(){
