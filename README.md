@@ -1,6 +1,14 @@
 # cloudflare-ddns
 A simple ddns client for cloudflare
 
+Build instructions
+
+    git clone https://github.com/roypur/cloudflare-ddns
+    cd cloudflare-ddns
+    mvn package
+
+The packaged file will be under target/ddns-version.jar
+
 To use it run
 
     java -jar ddns.jar config.json
