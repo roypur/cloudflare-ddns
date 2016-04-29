@@ -37,6 +37,7 @@ class ApiClient{
         this.apiKey = apiKey;
         ipv4Address = "";
         ipv6Address = "";
+        this.validateCerts = validateCerts;
     }
     
     
@@ -57,6 +58,10 @@ class ApiClient{
         SimpleHttpClient client = new SimpleHttpClient();
         
         Request req = new Request(url);
+        
+        if(!validateCerts){
+            req.disableSSLValidation();
+        }
         
         req.putHeader("Content-Type", "application/json");
         req.putHeader("X-Auth-Key", apiKey);
@@ -83,6 +88,11 @@ class ApiClient{
         SimpleHttpClient client = new SimpleHttpClient();
         
         Request req = new Request(url);
+        
+        if(!validateCerts){
+            req.disableSSLValidation();
+        }
+        
         req.setBody(jsonString);
         req.setMethod("PUT"); 
            
@@ -102,6 +112,10 @@ class ApiClient{
         SimpleHttpClient client = new SimpleHttpClient();
         
         Request req = new Request(url);
+        
+        if(!validateCerts){
+            req.disableSSLValidation();
+        }
         
         req.putHeader("X-Auth-Key", apiKey);
         req.putHeader("X-Auth-Email", apiEmail);
@@ -128,7 +142,11 @@ class ApiClient{
             client.useV6();
         
             req = new Request(url);
-        
+            
+            if(!validateCerts){
+                req.disableSSLValidation();
+            }
+            
             resp = client.exec(req);
         
             ipv6Address = resp.getBody().trim();
