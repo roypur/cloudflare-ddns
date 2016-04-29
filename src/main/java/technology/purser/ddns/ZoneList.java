@@ -1,3 +1,4 @@
+package technology.purser.ddns;
 class ZoneList{
     private Zone[] result;
     public Zone getZone(String name){
