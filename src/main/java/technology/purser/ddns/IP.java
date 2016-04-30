@@ -18,7 +18,7 @@ class IP{
         if( mac.length() < 12 ){
             InetAddress address = null;
             try{
-                address = InetAddress.getByName(ip);
+                address = InetAddress.getByName(mac);
             }catch(UnknownHostException e){
                 return null;
             }
