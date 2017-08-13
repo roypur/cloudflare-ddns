@@ -51,10 +51,10 @@ Example config-file:
     "apiKey":"7f173c21601a601498726cc6bd66645c088a0",
     "apiEmail":"mail@example.org",
     "domain":"example.org",
-    "v4Host":"home",
+    "validateCerts":true,
+    "ipv4":["imap", "smtp"],
     "ipv6":{
         "first":"AA:BB:CC:BB:EE:AB",
         "second":"BA:44:AA:CC:AE:AB"
     }
 }
-
