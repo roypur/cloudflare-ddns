@@ -17,5 +17,5 @@ export GOARCH=amd64 && export GOOS=freebsd && go build -o $SCRIPTPATH/bin/freebs
 export GOARCH=amd64 && export GOOS=windows && go build -o $SCRIPTPATH/bin/windows_amd64.exe $SCRIPTPATH/src/*.go
 export GOARCH=386 && export GOOS=windows && go build -o $SCRIPTPATH/bin/windows_i386.exe $SCRIPTPATH/src/*.go
 
-export GOARCH=386 && export GOOS=darwin && go build -o $SCRIPTPATH/bin/darwin_i386.exe $SCRIPTPATH/src/*.go
-export GOARCH=amd64 && export GOOS=darwin && go build -o $SCRIPTPATH/bin/darwin_amd64.exe $SCRIPTPATH/src/*.go
+export GOARCH=386 && export GOOS=darwin && go build -o $SCRIPTPATH/bin/darwin_i386 $SCRIPTPATH/src/*.go
+export GOARCH=amd64 && export GOOS=darwin && go build -o $SCRIPTPATH/bin/darwin_amd64 $SCRIPTPATH/src/*.go

@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type config struct {
+type Config struct {
 	ApiKey   string            `json:"apiKey"`
 	ApiEmail string            `json:"apiEmail"`
 	Domain   string            `json:"domain"`
@@ -15,7 +15,7 @@ type config struct {
 	Ipv6     map[string]string `json:"ipv6"`
 }
 
-func getConfig() config {
+func getConfig() Config {
 
 	var fileName string = "config.json"
 
@@ -30,7 +30,7 @@ func getConfig() config {
 		os.Exit(1)
 	}
 
-	var c config
+	var c Config
 
 	err = json.Unmarshal(fileContent, &c)
 
