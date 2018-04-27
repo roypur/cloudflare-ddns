@@ -12,8 +12,16 @@ type Config struct {
 	ApiEmail string            `json:"apiEmail"`
 	Domain   string            `json:"domain"`
 	Ipv4     []string          `json:"ipv4"`
-	Ipv6     map[string]string `json:"ipv6"`
+	Ipv6     map[string]Host   `json:"ipv6"`
 }
+type Host struct {
+    Addr string `json:"addr"`
+    PrefixSize int64 `json:"prefix-size"`
+    HostSize int64 `json:"host-size"`
+    LocalPrefix int64 `json:"prefix-id"`
+    IsMac bool `json:"ismac"`
+}
+
 
 func getConfig() Config {
 

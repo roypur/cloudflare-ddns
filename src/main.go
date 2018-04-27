@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"strings"
     "sync"
+    "math/big"
 )
 
 const ipEndpoint = "https://icanhazip.com/"
+
+const IP6_ADDR_LENGTH = 16
 
 var ip6 net.IP
 var ip4 net.IP
@@ -60,13 +63,14 @@ func main() {
         if hasIp6{
             success = true
             wg.Add(len(conf.Ipv6))
-		    for host, mac := range conf.Ipv6 {
-                go findAndUpdate(records.Result, host, conf, mac)
+		    for hostName, host := range conf.Ipv6 {
+                go findAndUpdate(records.Result, hostName, conf, host)
 		    }
         }
         if hasIp4{
 		    for _,host := range conf.Ipv4 {
-                go findAndUpdate(records.Result, host, conf, "")
+                var empty Host
+                go findAndUpdate(records.Result, host, conf, empty)
 		    }
         }
         wg.Wait()
@@ -80,13 +84,13 @@ func main() {
 	}
 }
 
-func findAndUpdate(records []Record, host string, conf Config, mac string) {
+func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
     defer wg.Done()
     var err error
     var isIp4 bool
 
     recType := "AAAA"
-    if len(mac) == 0{
+    if len(strings.TrimSpace(host.Addr)) == 0{
         isIp4 = true
         recType = "A"
     }
@@ -94,7 +98,7 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
     for _, rec := range records {
 
         //lower case fqdn
-        var fqdn string = strings.ToLower(strings.TrimSpace(host) + "." + strings.TrimSpace(conf.Domain))
+        var fqdn string = strings.ToLower(strings.TrimSpace(hostName) + "." + strings.TrimSpace(conf.Domain))
 
         var recordName string = strings.TrimSpace(strings.ToLower(rec.Name))
 
@@ -102,7 +106,7 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
             if isIp4{
                 rec.Content = ip4.String()
             }else{
-                rec.Content = joinIP(mac)
+                rec.Content = joinIP(host)
             }
             err = update(conf.ApiEmail, conf.ApiKey, rec)
 
@@ -116,45 +120,66 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
     }
 }
 
-func joinIP(mac string) string {
+func joinIP(host Host) string {
 
-    var tmp string = mac
+    var tmp string = host.Addr
 
-    mac = ""
+    mac := ""
 
-    // remove colons and insert fffe in the middle
-    for _, v := range tmp {
+    if host.IsMac{
+        // remove colons and insert fffe in the middle
+        for _, v := range tmp {
 
-        if isHex(v) {
-            mac += string(v)
+            if isHex(v) {
+                mac += string(v)
+            }
+
+            if len(mac) == 6 {
+                mac += "fffe"
+            }
         }
-
-        if len(mac) == 6 {
-            mac += "fffe"
-        }
+    }else{
+        //Do some magic here please
+        mac = host.Addr
     }
 
-    macAddr, err := hex.DecodeString(mac)
+    tmpAddr, err := hex.DecodeString(mac)
 
     if err == nil {
-        macAddr[0] = macAddr[0] ^ 2
+        tmpAddr[0] = tmpAddr[0] ^ 2
     } else {
         return "Invalid mac-address"
     }
 
-    var fullIP net.IP = make(net.IP, 16)
+    addr := make([]byte, IP6_ADDR_LENGTH+1)
 
-    // merge mac and ip
-    for k, v := range ip6 {
-        if k < 8 {
-            fullIP[k] = v
-        } else {
-            fullIP[k] = macAddr[k-8]
-        }
+    addrLen := len(addr)
+    tmpAddrLen := len(tmpAddr)
+    addr[0] = 1
+    for k,_ := range tmpAddr{
+        addr[addrLen-k-1] = tmpAddr[tmpAddrLen-k-1]
     }
 
-    return net.IP(fullIP).String()
+    tmpPrefix := append([]byte{1}, ip6...)
 
+    bigPrefix := big.NewInt(0)
+    bigPrefix.SetBytes(tmpPrefix)
+
+    for i:=host.PrefixSize; i<128; i++{
+        bigPrefix.SetBit(bigPrefix, int(i), 0)
+    }
+
+    bigHostAddr := big.NewInt(0)
+    bigHostAddr.SetBytes(addr)
+
+    bigIP := big.NewInt(0)
+    bigIP = bigIP.Or(bigHostAddr, bigPrefix)
+
+    ret := net.IP(bigIP.Bytes()).String()
+    fmt.Println(bigIP.Bytes())
+    fmt.Println(len(bigHostAddr.Bytes()))
+    fmt.Println(len(bigIP.Bytes()))
+    return ret
 }
 
 func isHex(r rune) bool {
