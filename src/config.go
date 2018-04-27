@@ -16,8 +16,8 @@ type Config struct {
 }
 type Host struct {
     Addr string `json:"addr"`
-    PrefixSize int64 `json:"prefix-size"`
-    HostSize int64 `json:"host-size"`
+    PrefixSize int `json:"prefix-size"`
+    HostSize int `json:"host-size"`
     LocalPrefix int64 `json:"prefix-id"`
     IsMac bool `json:"ismac"`
 }

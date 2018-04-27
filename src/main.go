@@ -165,21 +165,27 @@ func joinIP(host Host) string {
     bigPrefix := big.NewInt(0)
     bigPrefix.SetBytes(tmpPrefix)
 
-    for i:=host.PrefixSize; i<128; i++{
-        bigPrefix.SetBit(bigPrefix, int(i), 0)
+    for i:=0; i<(128-host.PrefixSize); i++{
+        bigPrefix.SetBit(bigPrefix, i, 0)
     }
 
     bigHostAddr := big.NewInt(0)
     bigHostAddr.SetBytes(addr)
 
     bigIP := big.NewInt(0)
-    bigIP = bigIP.Or(bigHostAddr, bigPrefix)
+    bigIP.Or(bigHostAddr, bigPrefix)
 
-    ret := net.IP(bigIP.Bytes()).String()
-    fmt.Println(bigIP.Bytes())
-    fmt.Println(len(bigHostAddr.Bytes()))
-    fmt.Println(len(bigIP.Bytes()))
-    return ret
+    bigLocalPrefix := big.NewInt(host.LocalPrefix)
+    bigLocalPrefix.Lsh(bigLocalPrefix, uint(host.HostSize))
+
+    for i:=0; i<host.PrefixSize; i++{
+        bigLocalPrefix.SetBit(bigLocalPrefix, i, 0)
+    }
+
+    bigIP.Or(bigLocalPrefix, bigIP)
+    ipBytes := bigIP.Bytes()[1:]
+
+    return net.IP(ipBytes).String()
 }
 
 func isHex(r rune) bool {
