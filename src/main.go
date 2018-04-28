@@ -124,66 +124,87 @@ func joinIP(host Host) string {
 
     var tmp string = host.Addr
 
-    mac := ""
+    suffix := ""
+    var addr []byte
+
+    hostPrefixLength := host.HostPrefixLength
 
     if host.IsMac{
+        var err error
         // remove colons and insert fffe in the middle
         for _, v := range tmp {
 
             if isHex(v) {
-                mac += string(v)
+                suffix += string(v)
             }
 
-            if len(mac) == 6 {
-                mac += "fffe"
+            if len(suffix) == 6 {
+                suffix += "fffe"
             }
         }
+
+        addr, err = hex.DecodeString(suffix)
+
+        if err == nil {
+            addr[0] = addr[0] ^ 2
+        } else {
+            return "Invalid mac-address"
+        }
+        hostPrefixLength = 64
     }else{
-        //Do some magic here please
-        mac = host.Addr
+        addr = net.ParseIP(host.Addr)
     }
 
-    tmpAddr, err := hex.DecodeString(mac)
-
-    if err == nil {
-        tmpAddr[0] = tmpAddr[0] ^ 2
-    } else {
-        return "Invalid mac-address"
-    }
-
-    addr := make([]byte, IP6_ADDR_LENGTH+1)
-
-    addrLen := len(addr)
-    tmpAddrLen := len(tmpAddr)
-    addr[0] = 1
-    for k,_ := range tmpAddr{
-        addr[addrLen-k-1] = tmpAddr[tmpAddrLen-k-1]
-    }
-
-    tmpPrefix := append([]byte{1}, ip6...)
 
     bigPrefix := big.NewInt(0)
-    bigPrefix.SetBytes(tmpPrefix)
+    bigPrefix.SetBytes(ip6)
 
-    for i:=0; i<(128-host.PrefixSize); i++{
+    for i:=0; i<(128-host.PrefixLength); i++{
         bigPrefix.SetBit(bigPrefix, i, 0)
     }
 
     bigHostAddr := big.NewInt(0)
     bigHostAddr.SetBytes(addr)
 
+    for i:=hostPrefixLength; i<128; i++{
+        bigHostAddr.SetBit(bigHostAddr, i, 0)
+    }
+
     bigIP := big.NewInt(0)
     bigIP.Or(bigHostAddr, bigPrefix)
 
-    bigLocalPrefix := big.NewInt(host.LocalPrefix)
-    bigLocalPrefix.Lsh(bigLocalPrefix, uint(host.HostSize))
+    localPrefix := strings.TrimSpace(host.HostPrefix)
 
-    for i:=0; i<host.PrefixSize; i++{
+    if (len(localPrefix) % 2) == 1{
+        localPrefix = "0" + localPrefix
+    }
+
+    local, err := hex.DecodeString(localPrefix)
+
+    if err != nil{
+        return "Invalid prefix-id"
+    }
+
+    bigLocalPrefix := big.NewInt(0)
+    bigLocalPrefix.SetBytes(local)
+    bigLocalPrefix.Lsh(bigLocalPrefix, uint(hostPrefixLength))
+
+    for i:=0; i<host.PrefixLength; i++{
         bigLocalPrefix.SetBit(bigLocalPrefix, i, 0)
     }
 
     bigIP.Or(bigLocalPrefix, bigIP)
-    ipBytes := bigIP.Bytes()[1:]
+    tmpBytes := bigIP.Bytes()
+
+    ipBytes := make([]byte, IP6_ADDR_LENGTH)
+
+    tmpLength := len(tmpBytes)
+    for k,_ := range tmpBytes{
+        ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
+    }
+
+    ret := net.IP(ipBytes).String()
+    fmt.Println(ret)
 
     return net.IP(ipBytes).String()
 }
