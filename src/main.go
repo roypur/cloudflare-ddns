@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"strings"
     "sync"
+    "math/big"
 )
 
 const ipEndpoint = "https://icanhazip.com/"
+
+const IP6_ADDR_LENGTH = 16
 
 var ip6 net.IP
 var ip4 net.IP
@@ -60,13 +63,14 @@ func main() {
         if hasIp6{
             success = true
             wg.Add(len(conf.Ipv6))
-		    for host, mac := range conf.Ipv6 {
-                go findAndUpdate(records.Result, host, conf, mac)
+		    for hostName, host := range conf.Ipv6 {
+                go findAndUpdate(records.Result, hostName, conf, host)
 		    }
         }
         if hasIp4{
 		    for _,host := range conf.Ipv4 {
-                go findAndUpdate(records.Result, host, conf, "")
+                var empty Host
+                go findAndUpdate(records.Result, host, conf, empty)
 		    }
         }
         wg.Wait()
@@ -80,13 +84,13 @@ func main() {
 	}
 }
 
-func findAndUpdate(records []Record, host string, conf Config, mac string) {
+func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
     defer wg.Done()
     var err error
     var isIp4 bool
 
     recType := "AAAA"
-    if len(mac) == 0{
+    if len(strings.TrimSpace(host.Addr)) == 0{
         isIp4 = true
         recType = "A"
     }
@@ -94,7 +98,7 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
     for _, rec := range records {
 
         //lower case fqdn
-        var fqdn string = strings.ToLower(strings.TrimSpace(host) + "." + strings.TrimSpace(conf.Domain))
+        var fqdn string = strings.ToLower(strings.TrimSpace(hostName) + "." + strings.TrimSpace(conf.Domain))
 
         var recordName string = strings.TrimSpace(strings.ToLower(rec.Name))
 
@@ -102,7 +106,7 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
             if isIp4{
                 rec.Content = ip4.String()
             }else{
-                rec.Content = joinIP(mac)
+                rec.Content = joinIP(host)
             }
             err = update(conf.ApiEmail, conf.ApiKey, rec)
 
@@ -116,45 +120,93 @@ func findAndUpdate(records []Record, host string, conf Config, mac string) {
     }
 }
 
-func joinIP(mac string) string {
+func joinIP(host Host) string {
 
-    var tmp string = mac
+    var tmp string = host.Addr
 
-    mac = ""
+    suffix := ""
+    var addr []byte
 
-    // remove colons and insert fffe in the middle
-    for _, v := range tmp {
+    hostPrefixLength := host.HostPrefixLength
 
-        if isHex(v) {
-            mac += string(v)
+    if host.IsMac{
+        var err error
+        // remove colons and insert fffe in the middle
+        for _, v := range tmp {
+
+            if isHex(v) {
+                suffix += string(v)
+            }
+
+            if len(suffix) == 6 {
+                suffix += "fffe"
+            }
         }
 
-        if len(mac) == 6 {
-            mac += "fffe"
-        }
-    }
+        addr, err = hex.DecodeString(suffix)
 
-    macAddr, err := hex.DecodeString(mac)
-
-    if err == nil {
-        macAddr[0] = macAddr[0] ^ 2
-    } else {
-        return "Invalid mac-address"
-    }
-
-    var fullIP net.IP = make(net.IP, 16)
-
-    // merge mac and ip
-    for k, v := range ip6 {
-        if k < 8 {
-            fullIP[k] = v
+        if err == nil {
+            addr[0] = addr[0] ^ 2
         } else {
-            fullIP[k] = macAddr[k-8]
+            return "Invalid mac-address"
         }
+        hostPrefixLength = 64
+    }else{
+        addr = net.ParseIP(host.Addr)
     }
 
-    return net.IP(fullIP).String()
 
+    bigPrefix := big.NewInt(0)
+    bigPrefix.SetBytes(ip6)
+
+    for i:=0; i<(128-host.PrefixLength); i++{
+        bigPrefix.SetBit(bigPrefix, i, 0)
+    }
+
+    bigHostAddr := big.NewInt(0)
+    bigHostAddr.SetBytes(addr)
+
+    for i:=hostPrefixLength; i<128; i++{
+        bigHostAddr.SetBit(bigHostAddr, i, 0)
+    }
+
+    bigIP := big.NewInt(0)
+    bigIP.Or(bigHostAddr, bigPrefix)
+
+    localPrefix := strings.TrimSpace(host.HostPrefix)
+
+    if (len(localPrefix) % 2) == 1{
+        localPrefix = "0" + localPrefix
+    }
+
+    local, err := hex.DecodeString(localPrefix)
+
+    if err != nil{
+        return "Invalid prefix-id"
+    }
+
+    bigLocalPrefix := big.NewInt(0)
+    bigLocalPrefix.SetBytes(local)
+    bigLocalPrefix.Lsh(bigLocalPrefix, uint(hostPrefixLength))
+
+    for i:=0; i<host.PrefixLength; i++{
+        bigLocalPrefix.SetBit(bigLocalPrefix, i, 0)
+    }
+
+    bigIP.Or(bigLocalPrefix, bigIP)
+    tmpBytes := bigIP.Bytes()
+
+    ipBytes := make([]byte, IP6_ADDR_LENGTH)
+
+    tmpLength := len(tmpBytes)
+    for k,_ := range tmpBytes{
+        ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
+    }
+
+    ret := net.IP(ipBytes).String()
+    fmt.Println(ret)
+
+    return net.IP(ipBytes).String()
 }
 
 func isHex(r rune) bool {
