@@ -5,7 +5,19 @@
     "validateCerts":true,
     "ipv4":["imap", "smtp"],
     "ipv6":{
-        "first":"AA:BB:CC:BB:EE:AB",
-        "second":"BA:44:AA:CC:AE:AB"
+        "first":{
+            "addr":"AA:BB:CC:BB:EE:AB",
+            "prefix-length":48,
+            "host-prefix-length":64,
+            "prefix-id":"1",
+            "ismac":true
+        },
+        "second":{
+            "addr":"::1",
+            "prefix-length":48,
+            "host-prefix-length":64,
+            "prefix-id":"1",
+            "ismac":false
+        }
     }
 }

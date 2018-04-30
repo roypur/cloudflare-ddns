@@ -166,7 +166,7 @@ func joinIP(host Host) string {
     bigHostAddr := big.NewInt(0)
     bigHostAddr.SetBytes(addr)
 
-    for i:=hostPrefixLength; i<128; i++{
+    for i:=(128-hostPrefixLength); i<128; i++{
         bigHostAddr.SetBit(bigHostAddr, i, 0)
     }
 
@@ -202,9 +202,6 @@ func joinIP(host Host) string {
     for k,_ := range tmpBytes{
         ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
     }
-
-    ret := net.IP(ipBytes).String()
-    fmt.Println(ret)
 
     return net.IP(ipBytes).String()
 }

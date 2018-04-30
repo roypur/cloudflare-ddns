@@ -3,14 +3,14 @@ package main
 import "strconv"
 
 type Zone struct {
-	CFSuccess
-	Id   string `json:"id"`
-	Name string `json:"name"`
+    CFSuccess
+    Id   string `json:"id"`
+    Name string `json:"name"`
 }
 
 type ZoneList struct {
-	CFSuccess
-	Result []Zone `json:"result"`
+    CFSuccess
+    Result []Zone `json:"result"`
 }
 
 type RecordList struct {

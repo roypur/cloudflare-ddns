@@ -48,7 +48,7 @@ The binaries will be in the bin folder.
 to update your ddns run the compiled binary with path to config-file as argument
 
 Example config-file:
-```
+```json
 {
     "apiKey":"7f173c21601a601498726cc6bd66645c088a0",
     "apiEmail":"mail@example.org",
@@ -56,8 +56,20 @@ Example config-file:
     "validateCerts":true,
     "ipv4":["imap", "smtp"],
     "ipv6":{
-        "first":"AA:BB:CC:BB:EE:AB",
-        "second":"BA:44:AA:CC:AE:AB"
+        "first":{
+            "addr":"AA:BB:CC:BB:EE:AB",
+            "prefix-length":48,
+            "host-prefix-length":64,
+            "prefix-id":"1",
+            "ismac":true
+        },
+        "second":{
+            "addr":"::1",
+            "prefix-length":48,
+            "host-prefix-length":64,
+            "prefix-id":"1",
+            "ismac":false
+        }
     }
 }
 ```
