@@ -9,6 +9,7 @@ import (
 	"strings"
     "sync"
     "math/big"
+    "errors"
 )
 
 const ipEndpoint = "https://icanhazip.com/"
@@ -106,7 +107,14 @@ func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
             if isIp4{
                 rec.Content = ip4.String()
             }else{
-                rec.Content = joinIP(host)
+                rec.Content, err = joinIP(host)
+                if err != nil{
+                    fmt.Printf("ERROR: %s\n", err)
+                    mutex.Lock()
+                    success = false
+                    mutex.Unlock()
+                    return
+                }
             }
             err = update(conf.ApiEmail, conf.ApiKey, rec)
 
@@ -120,7 +128,7 @@ func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
     }
 }
 
-func joinIP(host Host) string {
+func joinIP(host Host) (string, error) {
 
     var tmp string = host.Addr
 
@@ -148,13 +156,16 @@ func joinIP(host Host) string {
         if err == nil {
             addr[0] = addr[0] ^ 2
         } else {
-            return "Invalid mac-address"
+            return "", errors.New("Invalid mac-address")
         }
         hostPrefixLength = 64
     }else{
         addr = net.ParseIP(host.Addr)
     }
 
+    if host.PrefixLength > host.HostPrefixLength{
+        return "", errors.New("prefix-length > host-prefix-length")
+    }
 
     bigPrefix := big.NewInt(0)
     bigPrefix.SetBytes(ip6)
@@ -182,7 +193,7 @@ func joinIP(host Host) string {
     local, err := hex.DecodeString(localPrefix)
 
     if err != nil{
-        return "Invalid prefix-id"
+        return "", errors.New(fmt.Sprintf("Invalid prefix-id: %s\n", localPrefix))
     }
 
     bigLocalPrefix := big.NewInt(0)
@@ -203,7 +214,7 @@ func joinIP(host Host) string {
         ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
     }
 
-    return net.IP(ipBytes).String()
+    return net.IP(ipBytes).String(), nil
 }
 
 func isHex(r rune) bool {

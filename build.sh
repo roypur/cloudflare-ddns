@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export CGO_ENABLED=0
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
