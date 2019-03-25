@@ -1,14 +1,15 @@
 package main
 
 import (
-	"encoding/hex"
-	"fmt"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"strings"
+    "encoding/hex"
+    "fmt"
+    "io/ioutil"
+    "net"
+    "net/http"
+    "strings"
     "sync"
     "math/big"
+    "github.com/vishvananda/netlink"
 )
 
 const ipEndpoint = "https://icanhazip.com/"
@@ -23,39 +24,63 @@ var mutex sync.Mutex
 var wg sync.WaitGroup
 
 func main() {
-	var conf Config = getConfig()
+    var conf Config = getConfig()
 
-	var resp *http.Response
-	var err error
+    var resp *http.Response
+    var err error
 
-	resp, err = GetV6(ipEndpoint)
+    if conf.LocalNetwork {
+        var v4Routes []netlink.Route
+        var v6Routes []netlink.Route
 
-	if err == nil {
-		content, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			ip6 = net.ParseIP(string(trim(content)))
-		} else {
-			fmt.Println("IPv6 address not found!")
-		}
-	}
+        externV4 := net.ParseIP("1.2.3.4")
+        externV6 := net.ParseIP("2a02::1")
 
-	resp, err = GetV4(ipEndpoint)
+        v6Routes, err = netlink.RouteGet(externV6)
 
-	if err == nil {
-		content, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			ip4 = net.ParseIP(string(trim(content)))
-		} else {
-			fmt.Println("IPv4 address not found!")
-		}
-	}
+        if (err == nil) && len(v6Routes) > 0 {
+            ip6 = v6Routes[0].Src
+        } else {
+            fmt.Println("IPv6 address not found!")
+        }
 
-	records, err := getRecords(conf.ApiEmail, conf.ApiKey, conf.Domain)
+        v4Routes, err = netlink.RouteGet(externV4)
 
-	var hasIp6 bool = (ip6 != nil)
-	var hasIp4 bool = (ip4 != nil)
+        if (err == nil) && len(v4Routes) > 0 {
+            ip4 = v4Routes[0].Src
+        } else {
+            fmt.Println("IPv4 address not found!")
+        }
+    } else {
+        resp, err = GetV6(ipEndpoint)
 
-	if err == nil {
+        if err == nil {
+            content, err := ioutil.ReadAll(resp.Body)
+            if err == nil {
+                ip6 = net.ParseIP(string(trim(content)))
+            } else {
+                fmt.Println("IPv6 address not found!")
+            }
+        }
+
+        resp, err = GetV4(ipEndpoint)
+
+        if err == nil {
+            content, err := ioutil.ReadAll(resp.Body)
+            if err == nil {
+                ip4 = net.ParseIP(string(trim(content)))
+            } else {
+                fmt.Println("IPv4 address not found!")
+            }
+        }
+    }
+
+    records, err := getRecords(conf.ApiEmail, conf.ApiKey, conf.Domain)
+
+    var hasIp6 bool = (ip6 != nil)
+    var hasIp4 bool = (ip4 != nil)
+
+    if err == nil {
         if hasIp4{
             success = true
             wg.Add(len(conf.Ipv4))
@@ -63,25 +88,25 @@ func main() {
         if hasIp6{
             success = true
             wg.Add(len(conf.Ipv6))
-		    for hostName, host := range conf.Ipv6 {
+            for hostName, host := range conf.Ipv6 {
                 go findAndUpdate(records.Result, hostName, conf, host)
-		    }
+            }
         }
         if hasIp4{
-		    for _,host := range conf.Ipv4 {
+            for _,host := range conf.Ipv4 {
                 var empty Host
                 go findAndUpdate(records.Result, host, conf, empty)
-		    }
+            }
         }
         wg.Wait()
-		if success {
-			fmt.Println("ddns-update: SUCCESS")
-		} else {
-			fmt.Println("ddns-update: FAIL")
-		}
-	} else {
-		fmt.Println("Failed communicating with cloudflare")
-	}
+        if success {
+            fmt.Println("ddns-update: SUCCESS")
+        } else {
+            fmt.Println("ddns-update: FAIL")
+        }
+    } else {
+        fmt.Println("Failed communicating with cloudflare")
+    }
 }
 
 func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
