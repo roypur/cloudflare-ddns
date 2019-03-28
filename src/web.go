@@ -75,7 +75,7 @@ func GetAddr(addr string, version uint) (internal net.IP, external net.IP, err e
 	transport.DialTLS = dialer.DialTLS
 	transport.Dial = dialer.Dial
 
-        var client http.Client
+	var client http.Client
 	client.Transport = transport
 
 	if version == 4 {
