@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Interval     int             `json:"interval"`
 	ApiKey       string          `json:"apiKey"`
 	ApiEmail     string          `json:"apiEmail"`
 	Domain       string          `json:"domain"`

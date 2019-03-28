@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 const ipEndpoint = "https://icanhazip.com/"
@@ -23,7 +24,17 @@ var wg sync.WaitGroup
 
 func main() {
 	var conf Config = getConfig()
+	if conf.Interval > 0 {
+		for {
+			time.Sleep(time.Duration(conf.Interval) * time.Second)
+			loop(conf)
+		}
+	} else {
+		loop(conf)
+	}
+}
 
+func loop(conf Config) {
 	var internalV4 net.IP
 	var internalV6 net.IP
 	var externalV4 net.IP
