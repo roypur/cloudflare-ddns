@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"time"
 )
 
 type LookupDialer struct {
@@ -23,43 +23,15 @@ func (d LookupDialer) DialContext(ctx context.Context, network string, addr stri
 	}
 
 	local, _, _ := net.SplitHostPort(conn.LocalAddr().String())
-
-	go func() {
-		d.ch <- local
-	}()
+	d.ch <- local
 
 	return
 }
 
-func (d LookupDialer) DialTLS(network string, addr string) (conn net.Conn, err error) {
-	if d.version == 4 {
-		conn, err = tls.Dial("tcp4", addr, new(tls.Config))
-	} else {
-		conn, err = tls.Dial("tcp6", addr, new(tls.Config))
+func CheckRedirect(req *http.Request, via []*http.Request) (err error) {
+	if len(via) > 5 {
+		err = errors.New("stopped after 5 redirects")
 	}
-
-	local, _, _ := net.SplitHostPort(conn.LocalAddr().String())
-
-	go func() {
-		d.ch <- local
-	}()
-
-	return
-}
-
-func (d LookupDialer) Dial(network string, addr string) (conn net.Conn, err error) {
-	if d.version == 4 {
-		conn, err = net.Dial("tcp4", addr)
-	} else {
-		conn, err = net.Dial("tcp6", addr)
-	}
-
-	local, _, _ := net.SplitHostPort(conn.LocalAddr().String())
-
-	go func() {
-		d.ch <- local
-	}()
-
 	return
 }
 
@@ -69,14 +41,14 @@ func GetAddr(addr string, version uint) (internal net.IP, external net.IP, err e
 
 	var dialer LookupDialer
 	dialer.version = version
-	dialer.ch = make(chan string)
+	dialer.ch = make(chan string, 7)
 
 	transport.DialContext = dialer.DialContext
-	transport.DialTLS = dialer.DialTLS
-	transport.Dial = dialer.Dial
 
 	var client http.Client
 	client.Transport = transport
+	client.CheckRedirect = CheckRedirect
+	client.Timeout = time.Duration(TIMEOUT) * time.Second
 
 	if version == 4 {
 		notFoundError = errors.New("IPv4 address not found!")

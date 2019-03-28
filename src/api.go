@@ -7,12 +7,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const cloudflareEndpoint string = "https://api.cloudflare.com/client/v4/"
 
 func getZone(email string, key string, domain string) (string, error) {
-	client := &http.Client{}
+	var client http.Client
+	client.Timeout = time.Duration(TIMEOUT) * time.Second
 
 	req, err := http.NewRequest("GET", cloudflareEndpoint+"zones/", nil)
 
@@ -45,10 +47,10 @@ func getZone(email string, key string, domain string) (string, error) {
 }
 
 func getRecords(email string, key string, domain string) (RecordList, error) {
-
 	// fetching domain id
 	zoneId, err := getZone(email, key, domain)
-	client := &http.Client{}
+	var client http.Client
+	client.Timeout = time.Duration(TIMEOUT) * time.Second
 	req, err := http.NewRequest("GET", cloudflareEndpoint+"zones/"+zoneId+"/dns_records/", nil)
 
 	var records RecordList
@@ -77,7 +79,8 @@ func getRecords(email string, key string, domain string) (RecordList, error) {
 
 func update(email string, key string, rec Record) error {
 	jsonContent, err := json.Marshal(rec)
-	client := &http.Client{}
+	var client http.Client
+	client.Timeout = time.Duration(TIMEOUT) * time.Second
 
 	if err == nil {
 		req, err := http.NewRequest("PUT", cloudflareEndpoint+"zones/"+rec.ZoneId+"/dns_records/"+rec.RecordId, bytes.NewBuffer(jsonContent))

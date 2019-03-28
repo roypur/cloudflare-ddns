@@ -14,6 +14,7 @@ import (
 const ipEndpoint = "https://icanhazip.com/"
 
 const IP6_ADDR_LENGTH = 16
+const TIMEOUT = 5
 
 var ip6 net.IP
 var ip4 net.IP
