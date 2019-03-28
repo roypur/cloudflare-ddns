@@ -8,21 +8,20 @@ import (
 )
 
 type Config struct {
-	ApiKey       string            `json:"apiKey"`
-	ApiEmail     string            `json:"apiEmail"`
-	Domain       string            `json:"domain"`
-        LocalNetwork bool              `json:"local"`
-	Ipv4         []string          `json:"ipv4"`
-	Ipv6         map[string]Host   `json:"ipv6"`
+	ApiKey       string          `json:"apiKey"`
+	ApiEmail     string          `json:"apiEmail"`
+	Domain       string          `json:"domain"`
+	LocalNetwork bool            `json:"local"`
+	Ipv4         []string        `json:"ipv4"`
+	Ipv6         map[string]Host `json:"ipv6"`
 }
 type Host struct {
-    Addr string `json:"addr"`
-    PrefixLength int `json:"prefix-length"`
-    HostPrefixLength int `json:"host-prefix-length"`
-    HostPrefix string `json:"prefix-id"`
-    IsMac bool `json:"ismac"`
+	Addr             string `json:"addr"`
+	PrefixLength     int    `json:"prefix-length"`
+	HostPrefixLength int    `json:"host-prefix-length"`
+	HostPrefix       string `json:"prefix-id"`
+	IsMac            bool   `json:"ismac"`
 }
-
 
 func getConfig() Config {
 
