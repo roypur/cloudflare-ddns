@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const ipEndpoint = "https://icanhazip.com/"
+const IP_LOOKUP_ENDPOINT = "https://icanhazip.com/"
 
 const IP6_ADDR_LENGTH = 16
 const TIMEOUT = 5
@@ -36,201 +36,194 @@ func main() {
 }
 
 func loop(conf Config) {
-	var internalV4 net.IP
-	var internalV6 net.IP
-	var externalV4 net.IP
-	var externalV6 net.IP
 	var err error
 
 	hasIp4 := false
-	hasIp6 := false
+        hasIp6 := false
 
-	internalV4, externalV4, err = GetAddr(ipEndpoint, 4)
-	if err == nil {
-		hasIp4 = true
-	} else {
-		fmt.Println(err)
-	}
+        getAddr := getRemoteAddr
+        if conf.LocalNetwork {
+            getAddr = getLocalAddr
+        }
 
-	internalV6, externalV6, err = GetAddr(ipEndpoint, 6)
-	if err == nil {
-		hasIp6 = true
-	} else {
-		fmt.Println(err)
-	}
+        ip4, err = getAddr(4)
+        if err == nil {
+            hasIp4 = true
+        } else {
+            fmt.Println(err)
+        }
 
-	if conf.LocalNetwork {
-		ip4 = internalV4
-		ip6 = internalV6
-	} else {
-		ip4 = externalV4
-		ip6 = externalV6
-	}
+        ip6, err = getAddr(6)
+        if err == nil {
+            hasIp6 = true
+        } else {
+            fmt.Println(err)
+        }
 
-	records, err := getRecords(conf.ApiEmail, conf.ApiKey, conf.Domain)
+        records, err := getRecords(conf.ApiEmail, conf.ApiKey, conf.Domain)
 
-	if err == nil {
-		if hasIp4 {
-			success = true
-			wg.Add(len(conf.Ipv4))
-		}
-		if hasIp6 {
-			success = true
-			wg.Add(len(conf.Ipv6))
-			for hostName, host := range conf.Ipv6 {
-				go findAndUpdate(records.Result, hostName, conf, host)
-			}
-		}
-		if hasIp4 {
-			for _, host := range conf.Ipv4 {
-				var empty Host
-				go findAndUpdate(records.Result, host, conf, empty)
-			}
-		}
-		wg.Wait()
-		if success {
-			fmt.Println("ddns-update: SUCCESS")
-		} else {
-			fmt.Println("ddns-update: FAIL")
-		}
-	} else {
-		fmt.Println("Failed communicating with cloudflare")
-	}
-}
+        if err == nil {
+            if hasIp4 {
+                success = true
+                wg.Add(len(conf.Ipv4))
+            }
+            if hasIp6 {
+                success = true
+                wg.Add(len(conf.Ipv6))
+                for hostName, host := range conf.Ipv6 {
+                    go findAndUpdate(records.Result, hostName, conf, host)
+                }
+            }
+            if hasIp4 {
+                for _, host := range conf.Ipv4 {
+                    var empty Host
+                    go findAndUpdate(records.Result, host, conf, empty)
+                }
+            }
+            wg.Wait()
+            if success {
+                fmt.Println("ddns-update: SUCCESS")
+            } else {
+                fmt.Println("ddns-update: FAIL")
+            }
+        } else {
+            fmt.Println("Failed communicating with cloudflare")
+        }
+    }
 
-func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
-	defer wg.Done()
-	var err error
-	var isIp4 bool
+    func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
+        defer wg.Done()
+        var err error
+        var isIp4 bool
 
-	recType := "AAAA"
-	if len(strings.TrimSpace(host.Addr)) == 0 {
-		isIp4 = true
-		recType = "A"
-	}
+        recType := "AAAA"
+        if len(strings.TrimSpace(host.Addr)) == 0 {
+            isIp4 = true
+            recType = "A"
+        }
 
-	for _, rec := range records {
+        for _, rec := range records {
 
-		//lower case fqdn
-		var fqdn string = strings.ToLower(strings.TrimSpace(hostName) + "." + strings.TrimSpace(conf.Domain))
+            //lower case fqdn
+            var fqdn string = strings.ToLower(strings.TrimSpace(hostName) + "." + strings.TrimSpace(conf.Domain))
 
-		var recordName string = strings.TrimSpace(strings.ToLower(rec.Name))
+            var recordName string = strings.TrimSpace(strings.ToLower(rec.Name))
 
-		if (recordName == fqdn) && (rec.Type == recType) {
-			if isIp4 {
-				rec.Content = ip4.String()
-			} else {
-				rec.Content, err = joinIP(host)
-				if err != nil {
-					fmt.Printf("ERROR: %s\n", err)
-					mutex.Lock()
-					success = false
-					mutex.Unlock()
-					return
-				}
-			}
-			err = update(conf.ApiEmail, conf.ApiKey, rec)
+            if (recordName == fqdn) && (rec.Type == recType) {
+                if isIp4 {
+                    rec.Content = ip4.String()
+                } else {
+                    rec.Content, err = joinIP(host)
+                    if err != nil {
+                        fmt.Printf("ERROR: %s\n", err)
+                        mutex.Lock()
+                        success = false
+                        mutex.Unlock()
+                        return
+                    }
+                }
+                err = update(conf.ApiEmail, conf.ApiKey, rec)
 
-			if err != nil {
-				mutex.Lock()
-				fmt.Println("Failed to update " + recType + " record " + fqdn)
-				success = false
-				mutex.Unlock()
-			}
-		}
-	}
-}
+                if err != nil {
+                    mutex.Lock()
+                    fmt.Println("Failed to update " + recType + " record " + fqdn)
+                    success = false
+                    mutex.Unlock()
+                }
+            }
+        }
+    }
 
-func joinIP(host Host) (string, error) {
+    func joinIP(host Host) (string, error) {
 
-	var tmp string = host.Addr
+        var tmp string = host.Addr
 
-	suffix := ""
-	var addr []byte
+        suffix := ""
+        var addr []byte
 
-	hostPrefixLength := host.HostPrefixLength
+        hostPrefixLength := host.HostPrefixLength
 
-	if host.IsMac {
-		var err error
-		// remove colons and insert fffe in the middle
-		for _, v := range tmp {
+        if host.IsMac {
+            var err error
+            // remove colons and insert fffe in the middle
+            for _, v := range tmp {
 
-			if isHex(v) {
-				suffix += string(v)
-			}
+                if isHex(v) {
+                    suffix += string(v)
+                }
 
-			if len(suffix) == 6 {
-				suffix += "fffe"
-			}
-		}
+                if len(suffix) == 6 {
+                    suffix += "fffe"
+                }
+            }
 
-		addr, err = hex.DecodeString(suffix)
+            addr, err = hex.DecodeString(suffix)
 
-		if err == nil {
-			addr[0] = addr[0] ^ 2
-		} else {
-			return "", errors.New("Invalid mac-address")
-		}
-		hostPrefixLength = 64
-	} else {
-		addr = net.ParseIP(host.Addr)
-	}
+            if err == nil {
+                addr[0] = addr[0] ^ 2
+            } else {
+                return "", errors.New("Invalid mac-address")
+            }
+            hostPrefixLength = 64
+        } else {
+            addr = net.ParseIP(host.Addr)
+        }
 
-	if host.PrefixLength > host.HostPrefixLength {
-		return "", errors.New("prefix-length > host-prefix-length")
-	}
+        if host.PrefixLength > host.HostPrefixLength {
+            return "", errors.New("prefix-length > host-prefix-length")
+        }
 
-	bigPrefix := big.NewInt(0)
-	bigPrefix.SetBytes(ip6)
+        bigPrefix := big.NewInt(0)
+        bigPrefix.SetBytes(ip6)
 
-	for i := 0; i < (128 - host.PrefixLength); i++ {
-		bigPrefix.SetBit(bigPrefix, i, 0)
-	}
+        for i := 0; i < (128 - host.PrefixLength); i++ {
+            bigPrefix.SetBit(bigPrefix, i, 0)
+        }
 
-	bigHostAddr := big.NewInt(0)
-	bigHostAddr.SetBytes(addr)
+        bigHostAddr := big.NewInt(0)
+        bigHostAddr.SetBytes(addr)
 
-	for i := (128 - hostPrefixLength); i < 128; i++ {
-		bigHostAddr.SetBit(bigHostAddr, i, 0)
-	}
+        for i := (128 - hostPrefixLength); i < 128; i++ {
+            bigHostAddr.SetBit(bigHostAddr, i, 0)
+        }
 
-	bigIP := big.NewInt(0)
-	bigIP.Or(bigHostAddr, bigPrefix)
+        bigIP := big.NewInt(0)
+        bigIP.Or(bigHostAddr, bigPrefix)
 
-	localPrefix := strings.TrimSpace(host.HostPrefix)
+        localPrefix := strings.TrimSpace(host.HostPrefix)
 
-	if (len(localPrefix) % 2) == 1 {
-		localPrefix = "0" + localPrefix
-	}
+        if (len(localPrefix) % 2) == 1 {
+            localPrefix = "0" + localPrefix
+        }
 
-	local, err := hex.DecodeString(localPrefix)
+        local, err := hex.DecodeString(localPrefix)
 
-	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid prefix-id: %s\n", localPrefix))
-	}
+        if err != nil {
+            return "", errors.New(fmt.Sprintf("Invalid prefix-id: %s\n", localPrefix))
+        }
 
-	bigLocalPrefix := big.NewInt(0)
-	bigLocalPrefix.SetBytes(local)
-	bigLocalPrefix.Lsh(bigLocalPrefix, uint(hostPrefixLength))
+        bigLocalPrefix := big.NewInt(0)
+        bigLocalPrefix.SetBytes(local)
+        bigLocalPrefix.Lsh(bigLocalPrefix, uint(hostPrefixLength))
 
-	for i := 0; i < host.PrefixLength; i++ {
-		bigLocalPrefix.SetBit(bigLocalPrefix, i, 0)
-	}
+        for i := 0; i < host.PrefixLength; i++ {
+            bigLocalPrefix.SetBit(bigLocalPrefix, i, 0)
+        }
 
-	bigIP.Or(bigLocalPrefix, bigIP)
-	tmpBytes := bigIP.Bytes()
+        bigIP.Or(bigLocalPrefix, bigIP)
+        tmpBytes := bigIP.Bytes()
 
-	ipBytes := make([]byte, IP6_ADDR_LENGTH)
+        ipBytes := make([]byte, IP6_ADDR_LENGTH)
 
-	tmpLength := len(tmpBytes)
-	for k, _ := range tmpBytes {
-		ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
-	}
+        tmpLength := len(tmpBytes)
+        for k, _ := range tmpBytes {
+            ipBytes[IP6_ADDR_LENGTH-k-1] = tmpBytes[tmpLength-k-1]
+        }
 
-	return net.IP(ipBytes).String(), nil
-}
+        return net.IP(ipBytes).String(), nil
+    }
 
-func isHex(r rune) bool {
-	// Upper and lower case HEX ascii values
-	return (((r < 58) && (r > 47)) || ((r > 64) && (r < 71)) || ((r > 96) && (r < 103)))
-}
+    func isHex(r rune) bool {
+        // Upper and lower case HEX ascii values
+        return (((r < 58) && (r > 47)) || ((r > 64) && (r < 71)) || ((r > 96) && (r < 103)))
+    }
