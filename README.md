@@ -49,8 +49,7 @@ Example config-file:
 ```json
 {
     "interval": 300,
-    "api-key":"7f173c21601a601498726cc6bd66645c088a0",
-    "api-email":"mail@example.org",
+    "token: "ef3a5f32a4ebd99eca390469a68b25a199d6e924",
     "domain":"example.org",
     "ipv4": {
         "imap": {"local": false},

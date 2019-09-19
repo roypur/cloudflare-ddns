@@ -12,7 +12,7 @@ import (
 
 const cloudflareEndpoint string = "https://api.cloudflare.com/client/v4/"
 
-func getZone(email string, key string, domain string) (string, error) {
+func getZone(token string, domain string) (string, error) {
 	var client http.Client
 	client.Timeout = time.Duration(TIMEOUT) * time.Second
 
@@ -21,8 +21,7 @@ func getZone(email string, key string, domain string) (string, error) {
 	var zones ZoneList
 
 	if err == nil {
-		req.Header.Set("X-Auth-Key", key)
-		req.Header.Set("X-Auth-Email", email)
+		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := client.Do(req)
 		if err == nil {
 			content, err := ioutil.ReadAll(resp.Body)
@@ -46,9 +45,8 @@ func getZone(email string, key string, domain string) (string, error) {
 	return "", err
 }
 
-func getRecords(email string, key string, domain string) (RecordList, error) {
-	// fetching domain id
-	zoneId, err := getZone(email, key, domain)
+func getRecords(token string, domain string) (RecordList, error) {
+	zoneId, err := getZone(token, domain)
 	var client http.Client
 	client.Timeout = time.Duration(TIMEOUT) * time.Second
 	req, err := http.NewRequest("GET", cloudflareEndpoint+"zones/"+zoneId+"/dns_records/", nil)
@@ -56,8 +54,7 @@ func getRecords(email string, key string, domain string) (RecordList, error) {
 	var records RecordList
 	resp := new(http.Response)
 	if err == nil {
-		req.Header.Set("X-Auth-Key", key)
-		req.Header.Set("X-Auth-Email", email)
+		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err = client.Do(req)
 		if err == nil {
 			var content []byte
@@ -77,7 +74,7 @@ func getRecords(email string, key string, domain string) (RecordList, error) {
 	return records, err
 }
 
-func update(email string, key string, rec Record) error {
+func update(token string, rec Record) error {
 	jsonContent, err := json.Marshal(rec)
 	var client http.Client
 	client.Timeout = time.Duration(TIMEOUT) * time.Second
@@ -86,8 +83,7 @@ func update(email string, key string, rec Record) error {
 		req, err := http.NewRequest("PUT", cloudflareEndpoint+"zones/"+rec.ZoneId+"/dns_records/"+rec.RecordId, bytes.NewBuffer(jsonContent))
 
 		if err == nil {
-			req.Header.Set("X-Auth-Key", key)
-			req.Header.Set("X-Auth-Email", email)
+			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			var resp *http.Response
 			resp, err = client.Do(req)
