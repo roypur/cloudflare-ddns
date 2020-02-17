@@ -2,46 +2,17 @@
 
 A simple ddns client for cloudflare
 
-To build from source requires the go compiler. Precompiled binaries can be found under releases.
-
-The releases are compiled for
-
-
-linux:
-
-- arm
-- amd64
-- i386
-- mips64
-- mips64le
-
-freebsd:
-
-- arm
-- i386
-- amd64
-
-windows:
-
-- amd64
-- i386
-
-darwin:
-
-- amd64
-- i386
+To build from source requires the go compiler
 
 Build instructions:
 
 ```bash
 git clone https://github.com/roypur/cloudflare-ddns
 cd cloudflare-ddns
-./build
+./build.sh
 ```
 
-WARNING: This will compile for all architectures and may take a long time
-
-The binaries will be in the bin folder.
+The binary will be in the bin folder.
 
 To update your ddns run the compiled binary with path to config-file as argument
 
