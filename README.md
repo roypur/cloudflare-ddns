@@ -1,4 +1,4 @@
-cloudflare-ddns
+## cloudflare-ddns
 
 A simple ddns client for cloudflare
 
@@ -49,7 +49,7 @@ Example config-file:
 ```json
 {
     "interval": 300,
-    "token: "ef3a5f32a4ebd99eca390469a68b25a199d6e924",
+    "token": "ef3a5f32a4ebd99eca390469a68b25a199d6e924",
     "domain":"example.org",
     "ipv4": {
         "imap": {"local": false},
