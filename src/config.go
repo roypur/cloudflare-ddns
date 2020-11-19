@@ -7,22 +7,35 @@ import (
 	"os"
 )
 
-type Config struct {
+type ConfigFile struct {
 	Interval int             `json:"interval"`
 	Token    string          `json:"token"`
 	Domain   string          `json:"domain"`
-	Ipv4     map[string]Host `json:"ipv4"`
-	Ipv6     map[string]Host `json:"ipv6"`
+	Ipv4     map[string]ConfigHost `json:"ipv4"`
+	Ipv6     map[string]ConfigHost `json:"ipv6"`
 }
-
-type Host struct {
-	mask             uint
+type ConfigHost struct {
 	LocalMode        bool   `json:"local"`
 	Addr             string `json:"addr"`
 	PrefixLength     int    `json:"prefix-length"`
 	HostPrefixLength int    `json:"host-prefix-length"`
 	HostPrefix       string `json:"prefix-id"`
 	IsMac            bool   `json:"ismac"`
+}
+type Config struct {
+	Interval int
+	Token    string
+	Domain   string
+	Hosts    []Host
+}
+type Host struct {
+	Mask             uint
+    Name             string
+	Addr             string
+	PrefixLength     int
+	HostPrefixLength int
+	HostPrefix       string
+	IsMac            bool
 }
 
 func getConfig() Config {
@@ -36,27 +49,41 @@ func getConfig() Config {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	var c Config
-	err = json.Unmarshal(fileContent, &c)
+	var cf ConfigFile
+	err = json.Unmarshal(fileContent, &cf)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	for k, v := range c.Ipv4 {
-		v.mask = IP4_REMOTE_FLAG
-		if v.LocalMode {
-			v.mask = IP4_LOCAL_FLAG
+    createHost := func(name string, configHost ConfigHost, flag uint)(host Host) {
+        host.Name = name
+        host.Addr = configHost.Addr
+        host.PrefixLength = configHost.PrefixLength
+        host.HostPrefixLength = configHost.HostPrefixLength
+        host.HostPrefix = configHost.HostPrefix
+        host.IsMac = configHost.IsMac
+		host.Mask = REMOTE_FLAG | flag
+		if configHost.LocalMode {
+			host.Mask = LOCAL_FLAG | flag
 		}
-		c.Ipv4[k] = v
-	}
+        return
+    }
 
-	for k, v := range c.Ipv6 {
-		v.mask = IP6_REMOTE_FLAG
-		if v.LocalMode {
-			v.mask = IP6_LOCAL_FLAG
-		}
-		c.Ipv6[k] = v
+    var c Config
+    clen := len(cf.Ipv4) + len(cf.Ipv6)
+    c.Hosts = make([]Host, clen, clen)
+    c.Interval = cf.Interval
+    c.Token = cf.Token
+    c.Domain = cf.Domain
+
+    for k, v := range cf.Ipv4 {
+        clen--
+        c.Hosts[clen] = createHost(k, v, IP4_FLAG)
+	}
+	for k, v := range cf.Ipv6 {
+        clen--
+        c.Hosts[clen] = createHost(k, v, IP6_FLAG)
 	}
 	return c
 }
