@@ -23,7 +23,7 @@ type DiscoveredAddress struct {
     Mask uint
 }
 
-func getLocalAddr(version uint) (addr net.IP, err error) {
+func getLocalAddr(version uint, _ time.Duration) (addr net.IP, err error) {
     fa := new(net.IPNet)
     fb := new(net.IPNet)
 
@@ -92,7 +92,7 @@ func (d LookupDialer) DialContext(ctx context.Context, network string, addr stri
 	return sysDialer.DialContext(ctx, "tcp6", addr)
 }
 
-func getRemoteAddr(version uint) (addr net.IP, err error) {
+func getRemoteAddr(version uint, timeout time.Duration) (addr net.IP, err error) {
     transport := new(http.Transport)
     var notFoundError error
 
@@ -103,7 +103,7 @@ func getRemoteAddr(version uint) (addr net.IP, err error) {
 
     var client http.Client
     client.Transport = transport
-    client.Timeout = time.Duration(TIMEOUT) * time.Second
+    client.Timeout = timeout
 
     if version == 4 {
         notFoundError = errors.New("Remote IPv4 address not found!")
@@ -129,7 +129,7 @@ func getRemoteAddr(version uint) (addr net.IP, err error) {
     return
 }
 
-func getAddr(version uint, local bool)(chan DiscoveredAddress) {
+func getAddr(version uint, local bool, timeout time.Duration)(chan DiscoveredAddress) {
     lookupFunc := getRemoteAddr
     if local {
         lookupFunc = getLocalAddr
@@ -138,7 +138,7 @@ func getAddr(version uint, local bool)(chan DiscoveredAddress) {
     ch := make(chan DiscoveredAddress)
     go func() {
         var res DiscoveredAddress
-        res.Addr, res.Err = lookupFunc(version)
+        res.Addr, res.Err = lookupFunc(version, timeout)
         tmp := make([]byte, IP6_ADDR_LENGTH, IP6_ADDR_LENGTH)
         for k,v := range res.Addr {
             tmp[k] = v

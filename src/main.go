@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+    "os"
 )
 
 const IP_LOOKUP_ENDPOINT = "https://icanhazip.com/"
 
 const IP6_ADDR_LENGTH = 16
-const TIMEOUT = 5
 
 const IP4_FLAG uint = (1 << 1)
 const IP6_FLAG uint = (1 << 2)
@@ -28,10 +28,20 @@ var mutex sync.Mutex
 var wg sync.WaitGroup
 
 func main() {
-	var conf Config = getConfig()
+    if len(os.Args) != 2 {
+        fmt.Printf("%s <config.json>\n")
+        return
+    }
+    conf, err := getConfig(os.Args[1])
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
 	if conf.Interval > 0 {
+        time.Sleep(time.Minute)
+        loop(conf)
 		for {
-			time.Sleep(time.Duration(conf.Interval) * time.Second)
+			time.Sleep(time.Duration(conf.Interval))
 			loop(conf)
 		}
 	} else {
@@ -44,10 +54,10 @@ func loop(conf Config) {
 	mask := uint(0)
 
     dc := make(map[uint]chan DiscoveredAddress)
-    dc[IP4_FLAG | LOCAL_FLAG] = getAddr(4, true)
-    dc[IP6_FLAG | LOCAL_FLAG] = getAddr(6, true)
-    dc[IP4_FLAG | REMOTE_FLAG] = getAddr(4, false)
-    dc[IP6_FLAG | REMOTE_FLAG] = getAddr(6, false)
+    dc[IP4_FLAG | LOCAL_FLAG] = getAddr(4, true, conf.Timeout)
+    dc[IP6_FLAG | LOCAL_FLAG] = getAddr(6, true, conf.Timeout)
+    dc[IP4_FLAG | REMOTE_FLAG] = getAddr(4, false, conf.Timeout)
+    dc[IP6_FLAG | REMOTE_FLAG] = getAddr(6, false, conf.Timeout)
 
     for flag,ch := range dc {
         data := <-ch
@@ -58,7 +68,7 @@ func loop(conf Config) {
             fmt.Println(data.Err)
         }
     }
-    records, err := getRecords(conf.Token, conf.Domain)
+    records, err := getRecords(conf.Token, conf.Domain, conf.Timeout)
 
     if err == nil {
         for _, host := range conf.Hosts {
@@ -115,7 +125,7 @@ func findAndUpdate(records []Record, hostName string, conf Config, host Host) {
                         return
                     }
                 }
-                err = update(conf.Token, rec)
+                err = update(conf.Token, rec, conf.Timeout)
 
                 if err != nil {
                     mutex.Lock()

@@ -12,9 +12,9 @@ import (
 
 const cloudflareEndpoint string = "https://api.cloudflare.com/client/v4/"
 
-func getZone(token string, domain string) (string, error) {
+func getZone(token string, domain string, timeout time.Duration) (string, error) {
 	var client http.Client
-	client.Timeout = time.Duration(TIMEOUT) * time.Second
+	client.Timeout = timeout
 
 	req, err := http.NewRequest("GET", cloudflareEndpoint+"zones/", nil)
 
@@ -45,10 +45,10 @@ func getZone(token string, domain string) (string, error) {
 	return "", err
 }
 
-func getRecords(token string, domain string) (RecordList, error) {
-	zoneId, err := getZone(token, domain)
+func getRecords(token string, domain string, timeout time.Duration) (RecordList, error) {
+	zoneId, err := getZone(token, domain, timeout)
 	var client http.Client
-	client.Timeout = time.Duration(TIMEOUT) * time.Second
+	client.Timeout = timeout
 	req, err := http.NewRequest("GET", cloudflareEndpoint+"zones/"+zoneId+"/dns_records/", nil)
 
 	var records RecordList
@@ -74,10 +74,10 @@ func getRecords(token string, domain string) (RecordList, error) {
 	return records, err
 }
 
-func update(token string, rec Record) error {
+func update(token string, rec Record, timeout time.Duration) error {
 	jsonContent, err := json.Marshal(rec)
 	var client http.Client
-	client.Timeout = time.Duration(TIMEOUT) * time.Second
+	client.Timeout = timeout
 
 	if err == nil {
 		req, err := http.NewRequest("PUT", cloudflareEndpoint+"zones/"+rec.ZoneId+"/dns_records/"+rec.RecordId, bytes.NewBuffer(jsonContent))

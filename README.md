@@ -1,7 +1,6 @@
 ## cloudflare-ddns
 
 A simple ddns client for cloudflare
-
 To build from source requires the go compiler
 
 Build instructions:
@@ -12,14 +11,18 @@ cd cloudflare-ddns
 ./build.sh
 ```
 
-The binary will be in the bin folder.
+How to run:
 
-To update your ddns run the compiled binary with path to config-file as argument
+```bash
+bin/linux_amd64 config.json
+```
 
-Example config-file:
+Example config file:
+
 ```json
 {
     "interval": 300,
+    "timeout": 1,
     "token": "ef3a5f32a4ebd99eca390469a68b25a199d6e924",
     "domain":"example.org",
     "ipv4": {

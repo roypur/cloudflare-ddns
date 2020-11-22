@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"os"
+    "time"
 )
 
 type ConfigFile struct {
-	Interval int             `json:"interval"`
+	Interval uint            `json:"interval"`
+    Timeout  uint            `json:"timeout"`
 	Token    string          `json:"token"`
 	Domain   string          `json:"domain"`
 	Ipv4     map[string]ConfigHost `json:"ipv4"`
@@ -23,7 +23,8 @@ type ConfigHost struct {
 	IsMac            bool   `json:"ismac"`
 }
 type Config struct {
-	Interval int
+	Interval time.Duration
+    Timeout time.Duration
 	Token    string
 	Domain   string
 	Hosts    []Host
@@ -38,22 +39,16 @@ type Host struct {
 	IsMac            bool
 }
 
-func getConfig() Config {
-	var fileName string = "config.json"
-
-	if len(os.Args) > 1 {
-		fileName = os.Args[1]
-	}
-	fileContent, err := ioutil.ReadFile(fileName)
+func getConfig(filename string) (conf Config, err error) {
+    content := make([]byte, 0, 0)
+	content, err = ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return
 	}
 	var cf ConfigFile
-	err = json.Unmarshal(fileContent, &cf)
+	err = json.Unmarshal(content, &cf)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+        return
 	}
 
     createHost := func(name string, configHost ConfigHost, flag uint)(host Host) {
@@ -70,20 +65,30 @@ func getConfig() Config {
         return
     }
 
-    var c Config
     clen := len(cf.Ipv4) + len(cf.Ipv6)
-    c.Hosts = make([]Host, clen, clen)
-    c.Interval = cf.Interval
-    c.Token = cf.Token
-    c.Domain = cf.Domain
+    conf.Hosts = make([]Host, clen, clen)
+
+    if cf.Interval < 60 {
+        conf.Interval = time.Minute
+    } else {
+        conf.Interval = time.Duration(cf.Interval) * time.Second
+    }
+    if cf.Timeout < 1 {
+        conf.Timeout = time.Second
+    } else {
+        conf.Timeout = time.Duration(cf.Timeout) * time.Second
+    }
+
+    conf.Token = cf.Token
+    conf.Domain = cf.Domain
 
     for k, v := range cf.Ipv4 {
         clen--
-        c.Hosts[clen] = createHost(k, v, IP4_FLAG)
+        conf.Hosts[clen] = createHost(k, v, IP4_FLAG)
 	}
 	for k, v := range cf.Ipv6 {
         clen--
-        c.Hosts[clen] = createHost(k, v, IP6_FLAG)
+        conf.Hosts[clen] = createHost(k, v, IP6_FLAG)
 	}
-	return c
+	return
 }
